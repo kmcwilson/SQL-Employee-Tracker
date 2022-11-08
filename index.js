@@ -49,3 +49,8 @@ const firstQuestions = async () => {
     catch (err) { console.log(err) };
     firstQuestions();
 };
+
+const addDepartment= () => {
+    
+
+}
