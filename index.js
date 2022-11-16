@@ -94,7 +94,8 @@ const addRole = async () => {
                 choices: departmentChoices
             }
         ]);
-       db.query('INSERT INTO roles VALUES (title, salary, department_id)', {
+        //How to get the depertment id from the user choice in a function
+       db.query(`INSERT INTO roles (title, salary, department_id) VALUES('${roleData.title}', '${roleData.salary}', '')`, {
             title: roleData.title, 
             salary: roleData.salary,
            
@@ -112,7 +113,7 @@ const addEmployee = async () => {
     try {
         console.log('Adding to employees');
         const roles= (await db.promise().query('SELECT * FROM roles'));    
-        const roleChoices= roles.map(roles=>{return{names: roles.title}});
+        const roleChoices= roles.map(roles=>{return{names: roles.title, id: roles.id}});
         console.log(roleChoices);
         const employeeData= await inquirer.prompt([
             {
@@ -133,11 +134,7 @@ const addEmployee = async () => {
 
             }
         ]);
-       db.query('INSERT INTO employees VALUES (title, first_name, last_name)'), {
-            title: roleChoices,
-            first_name: employeeData.first, 
-            last_name: employeeData.last
-        };
+       db.query(`INSERT INTO employees (first_name, last_name, role_id) VALUES ('${employeeData.first_name}', '${employeeData.last_name}', '${employeeData.title}') `);
         console.log(`${employeeData.first_name, employeeData.last_name, employeeData.title} added to the new employee to table table!`)
         firstQuestions();
     }
