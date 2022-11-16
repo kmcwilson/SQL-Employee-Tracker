@@ -1,33 +1,23 @@
 const inquirer = require('inquirer');
-const fs = require('fs');
-const consoleTable = require('console.table');
 const mysql = require('mysql2');
+const db = require('./db/connections')
 
-const db = mysql.createConnection(
-    {
-        host: 'localhost',
-        port: '3306',
-        user: 'root',
-        password: '',
-        database: 'employee_db'
-    },
-    console.log('Connected to the employee_db.')
-)
+const PORT = process.env.PORT || 3001;
+
 
 console.table(
     "\n------------ WELCOME TO THE EMPLOYEE TRACKER ------------\n"
 );
 
-
 const firstQuestions = async () => {
     try {
-        await inquirer.prompt({
+        const { choice } = await inquirer.prompt({
             type: 'list',
-            name: 'action',
+            name: 'choice',
             message: 'What would you like to do?',
-            choices: ['Add a department', 'Add a role', 'Add an employee', 'View all roles', 'View all departments', 'View all employees', 'Update an employee role'],
+            choices: ['Add a department', 'Add a role', 'Add an employee', 'View all roles', 'View all departments', 'View all employees', 'Update an employee role', 'Exit Application'],
         });
-        switch (action.choices) {
+        switch (choice) {
             case 'Add a department':
                 addDepartment();
                 break;
@@ -49,70 +39,144 @@ const firstQuestions = async () => {
             case 'Update an employee role':
                 updateEmployee();
                 break;
-
+            default: process.exit();
         }
     }
-    catch (err) { console.log(err) };
-    firstQuestions();
+    catch (err) { console.log("error" + err) };
 };
+
 
 const addDepartment = async () => {
     try {
         console.log('Adding to departments');
-        await inquirer.prompt([
+        const departmentData = await inquirer.prompt([
             {
                 name: 'department',
                 type: 'input',
                 message: 'What is the name of the new department?'
             }
         ]);
-        await db.query('INSERT INTO departments SET ?', {
-            departments_names: department.message
+        db.query(`INSERT INTO departments (department_name) VALUES ('${departmentData.department}')`, {
         });
-        console.log(`${department.message} added to the departments table!`)
+        console.log(`${departmentData.department} added to the departments table!`)
         firstQuestions();
     }
     catch (err) {
-            console.log(err);
+        console.log("error2" + err);
+    }
+};
+
+
+
+const addRole = async () => {
+
+    try {
+        console.log('Adding to roles');
+        const departments= (await db.promise().query('SELECT * FROM departments'))[0];    
+        const departmentChoices= departments.map(dep=>{return{name: dep.department_name, id: dep.id}});
+        console.log(departmentChoices);
+        const roleData = await inquirer.prompt([
+            {
+                name: 'title',
+                type: 'input',
+                message: 'What is the name of the new role?'
+            },
+            {
+                name: 'salary',
+                type: 'input',
+                message: 'What is the salary of the new role?'
+
+            }, 
+            {
+                name: 'department', 
+                type: 'list', 
+                message: 'Choose from the list of departments',
+                choices: departmentChoices
+            }
+        ]);
+       db.query('INSERT INTO roles VALUES (title, salary, department_id)', {
+            title: roleData.title, 
+            salary: roleData.salary,
+           
+        });
+        console.log(`${roleData.title} added to the roles table!`)
+        firstQuestions();
+    }
+    catch (err) {
+        console.log("error3" + err);
+    }
+};
+
+const addEmployee = async () => {
+
+    try {
+        console.log('Adding to employees');
+        const roles= (await db.promise().query('SELECT * FROM roles'));    
+        const roleChoices= roles.map(roles=>{return{names: roles.title}});
+        console.log(roleChoices);
+        const employeeData= await inquirer.prompt([
+            {
+                name: 'title',
+                type: 'input',
+                message: 'Choose from list of roles for the employee',
+                choices: roleChoices
+            },
+            {
+                name: 'first',
+                type: 'input',
+                message: 'What is the first name of the new employee?'
+            },
+            {
+                name: 'last', 
+                type: 'input', 
+                message: 'What is the last name of the new employee?'
+
+            }
+        ]);
+       db.query('INSERT INTO employees VALUES (title, first_name, last_name)'), {
+            title: roleChoices,
+            first_name: employeeData.first, 
+            last_name: employeeData.last
+        };
+        console.log(`${employeeData.first_name, employeeData.last_name, employeeData.title} added to the new employee to table table!`)
+        firstQuestions();
+    }
+    catch (err) {
+        console.log("error4" + err);
+    }
+};
+
+
+const viewRoles = function (){
+    db.query('SELECT * FROM roles INNER JOIN departments ON roles.department_id=departments.id', (err, result) => {
+        if(err){
+            console.log(err)
         }
-    };
-
-
-
-const addRole =
-    db.query('INSERT INTO roles (title)', (err, result) => {
-        if (err) {
-            console.log(err);
-        }
-        console.log(`${result} added to roles!`);
-    });
-
-const addEmployee =
-    db.query('INSERT INTO employees (title, first_name, last_name)', (err, result) => {
-        if (err) {
-            console.log(err);
-        }
-        console.log(`${result} added to employee list!`);
-    });
-
-const viewRoles =
-    db.query('SELECT * FROM roles', (err, result) => {
-        console.log(result);
-    });
-
-const viewDepartments =
-    db.query('SELECT * FROM departments', (err, result) => {
-        console.log(result);
-    });
-
-const viewEmployees =
-    db.query('SELECT * FROM employees', (err, result) => {
-        console.log(result);
-    });
-
-const updateEmployee =
-    db.query(`UPDATE employees SET name = ${inserted.name}`, (err, result) => {
         console.log(result);
     })
+    firstQuestions();
+};
 
+const viewDepartments = function () {
+    db.query('SELECT * FROM departments', (err, result) => {
+        if(err){
+            console.log(err)
+        }
+        console.log(result);
+    })
+    firstQuestions();
+};
 
+const viewEmployees = function () {
+    db.query('SELECT * FROM employees INNER JOIN roles ON employees.role_id= roles.id', (err, result) => {
+        if(err){
+            console.log(err)
+        }
+        console.log(result);
+    })
+    firstQuestions();
+};
+
+// const updateEmployee =
+
+firstQuestions();
