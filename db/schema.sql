@@ -29,5 +29,5 @@ ON DELETE SET NULL,
 manager_id INT,
 FOREIGN KEY (manager_id)
 REFERENCES employees(id) 
-ON DELETE SET NULL
+-- ON DELETE SET NULL
 );
